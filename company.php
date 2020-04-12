@@ -60,7 +60,8 @@
         $param = "%{$_GET['name-filter']}%";
         $stmt->bind_param("s", $param);
     } else {
-        $stmt = $conn->prepare("SELECT * FROM company");
+        echo "<h1>Please use filter</h1>";
+        exit();
     }
     $stmt->execute();
     $result = $stmt->get_result();

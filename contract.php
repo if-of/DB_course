@@ -18,7 +18,7 @@
 <a href="company.php">Companies</a><br/><br/>
 
 <button class="mb-2" type="button" data-toggle="collapse" data-target="#add-contract-block" aria-expanded="false">
-    Show add company block
+    Show add contract block
 </button>
 <div name="contract-block" id="add-contract-block" class="collapse mb-2 red-border-block">
     <label>Contract company:</label><br/>
@@ -46,6 +46,16 @@
     <br/>
 </div>
 
+<?php
+require_once 'dbconnection/pdo.php';
+
+$companyMap = [];
+$stmt = $conn->query("SELECT id_company, name FROM company");
+$stmt->execute();
+foreach ($stmt as $row) {
+    $companyMap[$row['id_company']] = $row['name'];
+}
+?>
 
 <button class="mb-2" type="button" data-toggle="collapse" data-target="#filter-block" aria-expanded="false">
     Show filter block
@@ -60,8 +70,13 @@
 
     <form action="<?php echo $_SERVER['PHP_SELF']; ?>" class="red-border-block">
         <label for="company-filter">Company filter:</label><br/>
-        <input type="number" id="company-filter" name="company-filter">
-
+        <select id="company-filter" name="company-filter">
+            <?php
+            foreach ($companyMap as $key => $value) {
+                echo '<option value="' . $key . '">' . $value . '</option>';
+            }
+            ?>
+        </select>
         <button type="submit">Find</button>
     </form>
 
@@ -74,18 +89,20 @@
 
         <button type="submit">Find</button>
     </form>
+
+    <form action="<?php echo $_SERVER['PHP_SELF']; ?>" class="red-border-block">
+        <label for="min-date-filter">Min date filter:</label><br/>
+        <input type="date" id="min-date-filter" name="min-date-filter"><br/>
+
+        <label for="max-date-filter">Max date filter:</label><br/>
+        <input type="date" id="max-date-filter" name="max-date-filter"><br/>
+
+        <button type="submit">Find</button>
+    </form>
 </div>
 
 <div name="contracts-list">
     <?php
-    require_once 'dbconnection/pdo.php';
-
-    $companyMap = [];
-    $stmt = $conn->query("SELECT id_company, name FROM company");
-    $stmt->execute();
-    foreach ($stmt as $row) {
-        $companyMap[$row['id_company']] = $row['name'];
-    }
 
     if (!empty($_GET['company-filter'])) {
         $stmt = $conn->prepare("SELECT * FROM contract WHERE id_company = ?");
@@ -98,9 +115,22 @@
         $stmt->bindValue(1, $_GET['min-price-filter'], PDO::PARAM_INT);
         $stmt->bindValue(2, $_GET['max-price-filter'], PDO::PARAM_INT);
         $stmt->execute();
-    } else {
-        $stmt = $conn->query("SELECT * FROM contract");
+    } else if (!empty($_GET['min-date-filter']) || !empty($_GET['max-date-filter'])) {
+        if (!empty($_GET['min-date-filter']) && !empty($_GET['max-date-filter'])) {
+            $stmt = $conn->prepare("SELECT * FROM contract WHERE data_start>=? AND data_end<=?");
+            $stmt->bindValue(1, $_GET['min-date-filter'], PDO::PARAM_INT);
+            $stmt->bindValue(2, $_GET['max-date-filter'], PDO::PARAM_INT);
+        } else if (!empty($_GET['min-date-filter'])) {
+            $stmt = $conn->prepare("SELECT * FROM contract WHERE data_start>=?");
+            $stmt->bindValue(1, $_GET['min-date-filter'], PDO::PARAM_INT);
+        } else {
+            $stmt = $conn->prepare("SELECT * FROM contract WHERE data_end<=?");
+            $stmt->bindValue(2, $_GET['max-date-filter'], PDO::PARAM_INT);
+        }
         $stmt->execute();
+    } else {
+        echo "<h1>Please use filter</h1>";
+        exit();
     }
     foreach ($stmt as $row) {
         $companyId = $row['id_company'];
